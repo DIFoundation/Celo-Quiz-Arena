@@ -1,9 +1,9 @@
 // src/app.js
-const express = require('express');
-const cors = require('cors');
-const quizRoutes = require('./routes/quiz');
-const playerRoutes = require('./routes/player.js');
-const adminRoutes = require('./routes/admin.js');
+import express from 'express';
+import cors from 'cors';
+import quizRoutes from './routes/quiz.js';
+import playerRoutes from './routes/player.js';
+import adminRoutes from './routes/admin.js';
 
 const app = express();
 
@@ -17,9 +17,9 @@ app.get('/api/health', (req, res) => res.json({ ok: true }));
 app.use('/api/quiz', quizRoutes);
 
 // Player endpoints (join/answer/leaderboard)
-app.use("/api/quizzes", playerRoutes); // handles /:id/join and /:id/answer
+app.use('/api/quizzes', playerRoutes); // handles /:id/join and /:id/answer
 
 // Admin endpoints
-app.use("/api/quizzes", adminRoutes);
+app.use('/api/quizzes', adminRoutes);
 
-module.exports = app;
+export default app;

@@ -1,6 +1,5 @@
 // src/sockets.js
-const db = require('./db');
-const { v4: uuidv4 } = require('uuid');
+import db from './db.js';
 
 /**
  * Socket events:
@@ -14,7 +13,7 @@ const { v4: uuidv4 } = require('uuid');
  * - player_joined, player_left, question, answer_accepted, quiz_started, quiz_ended
  */
 
-module.exports = function (io) {
+export default function (io) {
   io.on('connection', (socket) => {
     console.log('socket connected', socket.id);
 
@@ -28,16 +27,19 @@ module.exports = function (io) {
           RETURNING id, player_address, name, joined_at
         `;
         const r = await db.query(insertQ, [quizId, playerAddress, name || null]);
+        
         const participant = r.rows[0];
-
         socket.join(quizId);
         socket.data.participantId = participant.id;
         socket.data.quizId = quizId;
-
-        // notify room
-        io.to(quizId).emit('player_joined', { participant });
+        io.to(quizId).emit('player_joined', {
+          id: participant.id,
+          playerAddress: participant.player_address,
+          name: participant.name,
+          joinedAt: participant.joined_at
+        });
       } catch (err) {
-        console.error('join_room error', err);
+        console.error('Error joining room:', err);
         socket.emit('error', { message: 'failed to join' });
       }
     });
@@ -85,7 +87,7 @@ module.exports = function (io) {
     });
 
     socket.on('disconnect', () => {
-      // optional: broadcast leave
+      console.log('socket disconnected', socket.id);
     });
   });
-};
+}

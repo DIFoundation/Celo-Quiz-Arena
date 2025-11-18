@@ -1,5 +1,5 @@
 // src/services/quizService.js
-const db = require('../db');
+import db from "../db.js";
 
 /**
  * Scoring logic:
@@ -152,7 +152,7 @@ async function getResults(quizId) {
   return res.rows;
 }
 
-module.exports = {
+export {
   createQuiz,
   getQuiz,
   joinQuiz,
