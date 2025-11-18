@@ -27,7 +27,7 @@ export async function computeAndPersistResults(quizId, topN) {
 
   // 1) fetch all answers for this quiz
   const ansRes = await pool.query(
-    `SELECT a.*, p.wallet as player_wallet
+    `SELECT a.*, p.wallet
      FROM answers a
      JOIN participants p ON p.id = a.participant_id
      WHERE a.quiz_id = $1
@@ -58,7 +58,7 @@ export async function computeAndPersistResults(quizId, topN) {
     for (let rank = 0; rank < corrects.length; rank++) {
       const row = corrects[rank];
       const pid = row.participant_id;
-      participantMeta.set(pid, { wallet: row.player_wallet });
+      participantMeta.set(pid, { wallet: row.wallet });
 
       const pts = Math.max(0, BASE_POINTS - DECREMENT * rank);
       const prev = scores.get(pid) || 0;
@@ -94,7 +94,7 @@ export async function computeAndPersistResults(quizId, topN) {
 
     // mark quiz as finalized and set finalized_at
     await pool.query(
-      `UPDATE quizzes SET status='finalized', created_at = created_at WHERE id = $1`,
+      `UPDATE quizzes SET status='finalized', finalized_at = now() WHERE id = $1`,
       [quizId]
     );
 

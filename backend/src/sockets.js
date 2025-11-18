@@ -1,10 +1,9 @@
 // src/sockets.js
-const db = require('./db');
-const { v4: uuidv4 } = require('uuid');
+import db from './db.js';
 
 /**
  * Socket events:
- * - join_room: { quizId, playerAddress, name }
+ * - join_room: { quizId, wallet, name }
  * - leave_room: { quizId }
  * - host_start: { quizId }  // host tells server to start quiz (server emits question flow)
  * - submit_answer: { quizId, participantId, questionIndex, selectedOption }
@@ -14,30 +13,33 @@ const { v4: uuidv4 } = require('uuid');
  * - player_joined, player_left, question, answer_accepted, quiz_started, quiz_ended
  */
 
-module.exports = function (io) {
+export default function (io) {
   io.on('connection', (socket) => {
     console.log('socket connected', socket.id);
 
     socket.on('join_room', async (payload) => {
-      const { quizId, playerAddress, name } = payload;
+      const { quizId, wallet, name } = payload;
       try {
         // add participant if not exists
         const insertQ = `
-          INSERT INTO participants (quiz_id, player_address, name)
+          INSERT INTO participants (quiz_id, wallet, name)
           VALUES ($1, $2, $3)
-          RETURNING id, player_address, name, joined_at
+          RETURNING id, wallet, name, joined_at
         `;
-        const r = await db.query(insertQ, [quizId, playerAddress, name || null]);
+        const r = await db.query(insertQ, [quizId, wallet, name || null]);
+        
         const participant = r.rows[0];
-
         socket.join(quizId);
         socket.data.participantId = participant.id;
         socket.data.quizId = quizId;
-
-        // notify room
-        io.to(quizId).emit('player_joined', { participant });
+        io.to(quizId).emit('player_joined', {
+          id: participant.id,
+          wallet: participant.wallet,
+          name: participant.name,
+          joinedAt: participant.joined_at
+        });
       } catch (err) {
-        console.error('join_room error', err);
+        console.error('Error joining room:', err);
         socket.emit('error', { message: 'failed to join' });
       }
     });
@@ -85,7 +87,7 @@ module.exports = function (io) {
     });
 
     socket.on('disconnect', () => {
-      // optional: broadcast leave
+      console.log('socket disconnected', socket.id);
     });
   });
-};
+}

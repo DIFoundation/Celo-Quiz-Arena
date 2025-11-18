@@ -1,15 +1,16 @@
 // src/server.js
-const http = require('http');
-const app = require('./app');
-const sockets = require('./sockets');
-require('dotenv').config();
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+import app from './app.js';
+import sockets from './sockets.js';
+import 'dotenv/config';
 
 const PORT = process.env.PORT || 5000;
 
-const server = http.createServer(app);
-const io = require('socket.io')(server, {
+const server = createServer(app);
+const io = new Server(server, {
   cors: {
-    origin: '*',
+    origin: 'http://localhost:5000',
     methods: ['GET', 'POST'],
   },
 });

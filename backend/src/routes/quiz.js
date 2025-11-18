@@ -1,24 +1,20 @@
 // src/routes/quiz.js
-const express = require('express');
+import express from 'express';
+import { 
+  createQuiz, 
+  getQuiz, 
+  getResults 
+} from '../controllers/quizController.js';
+
 const router = express.Router();
-const quizController = require('../controllers/quizController');
 
 // create a quiz (host supplies metadata, token, winners, etc.)
-router.post('/', quizController.createQuiz);
+router.post('/', createQuiz);
 
 // get quiz info
-router.get('/:id', quizController.getQuiz);
-
-// join via REST (optional — sockets recommended)
-router.post('/:id/join', quizController.joinQuiz);
-
-// start quiz (host)
-router.post('/:id/start', quizController.startQuiz);
-
-// finalize - compute winners and persist results (host)
-router.post('/:id/finalize', quizController.finalizeQuiz);
+router.get('/:id', getQuiz);
 
 // get results
-router.get('/:id/results', quizController.getResults);
+router.get('/:id/results', getResults);
 
-module.exports = router;
+export default router;
