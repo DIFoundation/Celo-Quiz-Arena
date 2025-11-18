@@ -3,7 +3,7 @@ import db from './db.js';
 
 /**
  * Socket events:
- * - join_room: { quizId, playerAddress, name }
+ * - join_room: { quizId, wallet, name }
  * - leave_room: { quizId }
  * - host_start: { quizId }  // host tells server to start quiz (server emits question flow)
  * - submit_answer: { quizId, participantId, questionIndex, selectedOption }
@@ -18,15 +18,15 @@ export default function (io) {
     console.log('socket connected', socket.id);
 
     socket.on('join_room', async (payload) => {
-      const { quizId, playerAddress, name } = payload;
+      const { quizId, wallet, name } = payload;
       try {
         // add participant if not exists
         const insertQ = `
-          INSERT INTO participants (quiz_id, player_address, name)
+          INSERT INTO participants (quiz_id, wallet, name)
           VALUES ($1, $2, $3)
-          RETURNING id, player_address, name, joined_at
+          RETURNING id, wallet, name, joined_at
         `;
-        const r = await db.query(insertQ, [quizId, playerAddress, name || null]);
+        const r = await db.query(insertQ, [quizId, wallet, name || null]);
         
         const participant = r.rows[0];
         socket.join(quizId);
@@ -34,7 +34,7 @@ export default function (io) {
         socket.data.quizId = quizId;
         io.to(quizId).emit('player_joined', {
           id: participant.id,
-          playerAddress: participant.player_address,
+          wallet: participant.wallet,
           name: participant.name,
           joinedAt: participant.joined_at
         });

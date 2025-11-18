@@ -21,36 +21,6 @@ export const getQuiz = async (req, res) => {
   }
 };
 
-export const joinQuiz = async (req, res) => {
-  try {
-    const { playerAddress, name } = req.body;
-    const participant = await quizService.joinQuiz(req.params.id, playerAddress, name);
-    res.json({ ok: true, participant });
-  } catch (err) {
-    res.status(500).json({ ok: false, error: err.message });
-  }
-};
-
-export const startQuiz = async (req, res) => {
-  try {
-    // host-only check should be enforced by client/backend verification (simpler here)
-    await quizService.startQuiz(req.params.id);
-    res.json({ ok: true });
-  } catch (err) {
-    res.status(500).json({ ok: false, error: err.message });
-  }
-};
-
-export const finalizeQuiz = async (req, res) => {
-  try {
-    // server computes winners based on recorded answers (fastest-finger logic)
-    const { winners } = await quizService.finalizeQuiz(req.params.id);
-    res.json({ ok: true, winners });
-  } catch (err) {
-    res.status(500).json({ ok: false, error: err.message });
-  }
-};
-
 export const getResults = async (req, res) => {
   try {
     const results = await quizService.getResults(req.params.id);
