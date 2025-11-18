@@ -16,13 +16,13 @@ const db = require('../db');
 const BASE_POINTS = 1000;
 const DECREMENT = 50;
 
-async function createQuiz(host, token, numWinners, percentages, equalSplit, metadataURI) {
+async function createQuiz(host, token, num_winners, percentages, equal_split, metadata_uri) {
   const insert = `
     INSERT INTO quizzes (host, token, num_winners, equal_split, percentages, metadata_uri)
-    VALUES ($1, $2, $3, $4, $5::jsonb, $6)
+    VALUES ($1, $2, $3, $4, $5, $6)
     RETURNING *
   `;
-  const res = await db.query(insert, [host, token, numWinners, equalSplit, JSON.stringify(percentages || []), metadataURI || null]);
+  const res = await db.query(insert, [host, token, num_winners, equal_split, percentages || [], metadata_uri || null]);
   return res.rows[0];
 }
 

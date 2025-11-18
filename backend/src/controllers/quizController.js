@@ -4,8 +4,8 @@ const quizService = require('../services/quizService');
 module.exports = {
   createQuiz: async (req, res) => {
     try {
-      const { host, token = '0x0', numWinners = 3, percentages = [], equalSplit = true, metadataURI } = req.body;
-      const quiz = await quizService.createQuiz(host, token, numWinners, percentages, equalSplit, metadataURI);
+      const { host, token = '0x0', num_winners = 3, percentages = [], equal_split = true, metadata_uri } = req.body;
+      const quiz = await quizService.createQuiz(host, token, num_winners, percentages, equal_split, metadata_uri);
       res.json({ ok: true, quiz });
     } catch (err) {
       console.error(err);
