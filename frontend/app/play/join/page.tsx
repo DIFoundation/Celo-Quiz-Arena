@@ -1,29 +1,37 @@
+// app/play/join/page.jsx
 "use client";
-
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useConnection } from "wagmi";
+import api from "../../api/backend";
 
-export default function JoinQuiz() {
+export default function JoinPage() {
+  const { address } = useConnection();
   const [quizId, setQuizId] = useState("");
+  const [wallet, setWallet] = useState(`${address}`);
   const router = useRouter();
 
+  console.log(wallet);
+
+  const join = async () => {
+    try {
+      const res = await api.post(`/quiz/${quizId}/join`, { wallet });
+      alert("Joined! Participant ID: " + res.data.participant.id);
+      router.push(`/play/quiz/${quizId}`);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to join");
+    }
+  };
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center">
-      <h2 className="text-3xl mb-4">Enter Quiz ID</h2>
+    <div className="max-w-md mx-auto">
+      <h2 className="text-2xl font-semibold mb-4">Join Quiz</h2>
 
-      <input
-        className="border p-3 rounded-lg w-64 text-center"
-        value={quizId}
-        onChange={(e) => setQuizId(e.target.value)}
-        placeholder="e.g. 21"
-      />
+      <input placeholder="Quiz ID" value={quizId} onChange={(e)=>setQuizId(e.target.value)} className="w-full p-3 border rounded mb-3" />
+      <input placeholder="Your Wallet (optional)" value={wallet} onChange={(e)=>setWallet(e.target.value)} className="w-full p-3 border rounded mb-3" />
 
-      <button
-        onClick={() => router.push(`/play/quiz/${quizId}`)}
-        className="mt-4 px-6 py-3 bg-blue-600 text-white rounded-xl"
-      >
-        Join
-      </button>
+      <button onClick={join} className="px-6 py-3 bg-indigo-600 text-white rounded">Join</button>
     </div>
   );
 }
