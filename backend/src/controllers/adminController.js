@@ -1,20 +1,67 @@
 // src/controllers/adminController.js
 import { pool } from "../db.js";
 import { computeAndPersistResults } from "../services/scoringService.js";
+import { io } from "../server.js";
+import db from "../db.js";
 
 /**
  * Host starts the quiz (sets started flag)
  */
-export const startQuiz = async (req, res) => {
-  const quizId = req.params.id;
+// export const startQuiz = async (req, res) => {
+//   const quizId = req.params.id;
+//   try {
+//     await pool.query(`UPDATE quizzes SET status='active' WHERE id = $1`, [quizId]);
+//     return res.json({ ok: true });
+//   } catch (err) {
+//     console.error("startQuiz err", err);
+//     return res.status(500).json({ error: "failed to start" });
+//   }
+// };
+
+export const startQuiz = async(req, res) => {
   try {
-    await pool.query(`UPDATE quizzes SET status='active' WHERE id = $1`, [quizId]);
-    return res.json({ ok: true });
+    const { quizId } = req.params;
+
+    // mark quiz as started
+    await db.query(
+      "UPDATE quizzes SET status = 'started' WHERE id = $1",
+      [quizId]
+    );
+
+    // fetch metadata (questions)
+    const quiz = await db.query(
+      "SELECT metadata_uri, question_duration FROM quizzes WHERE id = $1",
+      [quizId]
+    );
+
+    const duration = quiz.rows[0].question_duration * 1000;
+
+    // load questions from IPFS or static JSON
+    const questions = await fetch(quiz.rows[0].metadata_uri).then(r => r.json());
+
+    let index = 0;
+
+    const interval = setInterval(() => {
+      if (index < questions.length) {
+        io.to(`quiz_${quizId}`).emit("new_question", {
+          index,
+          question: questions[index],
+          endsAt: Date.now() + duration
+        });
+        index++;
+      } else {
+        clearInterval(interval);
+        io.to(`quiz_${quizId}`).emit("quiz_finished", { quizId });
+      }
+    }, duration);
+
+    res.json({ success: true });
+
   } catch (err) {
-    console.error("startQuiz err", err);
-    return res.status(500).json({ error: "failed to start" });
+    res.status(400).json({ success: false, message: err.message });
   }
-};
+}
+
 
 /**
  * Host ends the quiz. (Optional; might be used to stop accepting answers)

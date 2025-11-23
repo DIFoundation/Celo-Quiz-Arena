@@ -1,5 +1,23 @@
 // src/controllers/playerController.js
 import { pool } from "../db.js";
+// import * as playerService from "../services/playerService.js";
+
+// export async function joinQuiz(req, res) {
+//   try {
+//     const { quizId } = req.params;
+//     const { wallet } = req.body;
+
+//     const participant = await playerService.joinQuiz(quizId, wallet);
+
+//     res.json({
+//       success: true,
+//       participant,
+//     });
+//   } catch (err) {
+//     res.status(400).json({ success: false, message: err.message });
+//   }
+// }
+
 
 /**
  * Player joins a quiz (creates a participant row)
