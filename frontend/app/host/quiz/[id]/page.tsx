@@ -1,4 +1,4 @@
-// app/host/quiz/[id]/page.jsx
+// app/host/quiz/[id]/page.tsx
 "use client";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
