@@ -76,7 +76,3 @@ io.on("connection", (socket) => {
 server.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });
-
-const quizGame = require("./socket/quizGame");
-
-quizGame(io);

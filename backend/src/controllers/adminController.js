@@ -5,114 +5,192 @@ import { io } from "../server.js";
 import db from "../db.js";
 
 /**
- * Host starts the quiz (sets started flag)
+ * Start quiz and begin broadcasting questions
  */
-// export const startQuiz = async (req, res) => {
-//   const quizId = req.params.id;
-//   try {
-//     await pool.query(`UPDATE quizzes SET status='active' WHERE id = $1`, [quizId]);
-//     return res.json({ ok: true });
-//   } catch (err) {
-//     console.error("startQuiz err", err);
-//     return res.status(500).json({ error: "failed to start" });
-//   }
-// };
-
-export const startQuiz = async(req, res) => {
+export const startQuiz = async (req, res) => {
   try {
-    const { quizId } = req.params;
+    const { id: quizId } = req.params;
 
-    // mark quiz as started
+    // Mark quiz as started
     await db.query(
-      "UPDATE quizzes SET status = 'started' WHERE id = $1",
+      "UPDATE quizzes SET status = 'active', started = true, started_at = now() WHERE id = $1",
       [quizId]
     );
 
-    // fetch metadata (questions)
-    const quiz = await db.query(
+    // Fetch quiz metadata
+    const quizRes = await db.query(
       "SELECT metadata_uri, question_duration FROM quizzes WHERE id = $1",
       [quizId]
     );
 
-    const duration = quiz.rows[0].question_duration * 1000;
+    if (quizRes.rowCount === 0) {
+      return res.status(404).json({ success: false, message: "Quiz not found" });
+    }
 
-    // load questions from IPFS or static JSON
-    const questions = await fetch(quiz.rows[0].metadata_uri).then(r => r.json());
+    const quiz = quizRes.rows[0];
+    const duration = (quiz.question_duration || 15) * 1000;
 
+    // Notify all connected players
+    io.to(`quiz_${quizId}`).emit("quiz_started", {
+      quizId,
+      startedAt: Date.now(),
+    });
+
+    // Load questions from metadata URI
+    let questions = [];
+    if (quiz.metadata_uri) {
+      try {
+        const response = await fetch(quiz.metadata_uri);
+        const metadata = await response.json();
+        questions = metadata.questions || [];
+      } catch (error) {
+        console.error("Failed to fetch metadata:", error);
+        return res.status(400).json({ 
+          success: false, 
+          message: "Failed to load questions from metadata URI" 
+        });
+      }
+    }
+
+    if (questions.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "No questions found in metadata" 
+      });
+    }
+
+    // Start broadcasting questions
     let index = 0;
-
     const interval = setInterval(() => {
       if (index < questions.length) {
-        io.to(`quiz_${quizId}`).emit("new_question", {
+        const questionData = {
           index,
           question: questions[index],
-          endsAt: Date.now() + duration
-        });
+          endsAt: Date.now() + duration,
+          totalQuestions: questions.length
+        };
+        
+        io.to(`quiz_${quizId}`).emit("new_question", questionData);
+        console.log(`Broadcasting question ${index + 1}/${questions.length} for quiz ${quizId}`);
+        
         index++;
       } else {
         clearInterval(interval);
         io.to(`quiz_${quizId}`).emit("quiz_finished", { quizId });
+        console.log(`Quiz ${quizId} finished`);
       }
     }, duration);
 
-    res.json({ success: true });
+    res.json({ 
+      success: true, 
+      message: "Quiz started",
+      totalQuestions: questions.length,
+      questionDuration: duration / 1000
+    });
 
   } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
+    console.error("startQuiz error:", err);
+    res.status(500).json({ success: false, message: err.message });
   }
-}
-
+};
 
 /**
- * Host ends the quiz. (Optional; might be used to stop accepting answers)
+ * End quiz (mark as ended, stop accepting answers)
  */
 export const endQuiz = async (req, res) => {
-  const quizId = req.params.id;
+  const { id: quizId } = req.params;
+  
   try {
-    await pool.query(`UPDATE quizzes SET status='ended' WHERE id = $1`, [quizId]);
-    return res.json({ ok: true });
+    await pool.query(
+      "UPDATE quizzes SET status = 'ended' WHERE id = $1",
+      [quizId]
+    );
+    
+    io.to(`quiz_${quizId}`).emit("quiz_ended", { quizId });
+    
+    return res.json({ success: true, message: "Quiz ended" });
   } catch (err) {
-    console.error("endQuiz err", err);
-    return res.status(500).json({ error: "failed to end" });
+    console.error("endQuiz error:", err);
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
 
 /**
- * Finalize: compute winners via scoringService, persist results and return winners list (wallets + ranks)
- * Body can optionally include `topN`. If not provided uses quiz.num_winners.
+ * Finalize quiz: compute winners and prepare for blockchain payout
  */
 export const finalizeQuiz = async (req, res) => {
-  const quizId = req.params.id;
+  const { id: quizId } = req.params;
+  
   try {
-    // fetch quiz to obtain num_winners
-    const q = await pool.query(`SELECT * FROM quizzes WHERE id = $1`, [quizId]);
-    if (q.rowCount === 0) return res.status(404).json({ error: "quiz not found" });
-    const quiz = q.rows[0];
-    // parse num_winners from stored columns (ensure correct naming)
-    const topN = Number(quiz.num_winners) || Number(req.body.topN) || 3;
+    // Fetch quiz details
+    const quizRes = await pool.query("SELECT * FROM quizzes WHERE id = $1", [quizId]);
+    
+    if (quizRes.rowCount === 0) {
+      return res.status(404).json({ success: false, message: "Quiz not found" });
+    }
+    
+    const quiz = quizRes.rows[0];
+    const topN = Number(quiz.num_winners) || 3;
 
+    // Compute and persist results
     const { winners, allScores } = await computeAndPersistResults(quizId, topN);
 
-    // Return winners in the shape smart contract expects (array of wallets ordered by rank)
+    // Format winners for smart contract (array of wallet addresses)
     const winnersWallets = winners.map((w) => w.wallet);
 
-    return res.json({ winners, winnersWallets, allScores });
+    // Emit to connected clients
+    io.to(`quiz_${quizId}`).emit("quiz_finalized", {
+      quizId,
+      winners,
+      allScores
+    });
+
+    return res.json({ 
+      success: true,
+      winners,
+      winnersWallets,
+      allScores,
+      contractAddress: quiz.contract_address
+    });
+    
   } catch (err) {
-    console.error("finalizeQuiz err", err);
-    return res.status(500).json({ error: err.message || "finalize failed" });
+    console.error("finalizeQuiz error:", err);
+    return res.status(500).json({ 
+      success: false, 
+      message: err.message || "Finalization failed" 
+    });
   }
 };
 
 /**
- * Cancel quiz prior to start: refunds logic is on-chain; backend marks status and returns prize info
+ * Cancel quiz before it starts
  */
 export const cancelQuiz = async (req, res) => {
-  const quizId = req.params.id;
+  const { id: quizId } = req.params;
+  
   try {
-    await pool.query(`UPDATE quizzes SET status='cancelled' WHERE id = $1`, [quizId]);
-    return res.json({ ok: true });
+    const result = await pool.query(
+      "UPDATE quizzes SET status = 'cancelled', cancelled_at = now() WHERE id = $1 AND started = false RETURNING *",
+      [quizId]
+    );
+    
+    if (result.rowCount === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Quiz not found or already started" 
+      });
+    }
+    
+    io.to(`quiz_${quizId}`).emit("quiz_cancelled", { quizId });
+    
+    return res.json({ 
+      success: true, 
+      message: "Quiz cancelled",
+      quiz: result.rows[0]
+    });
+    
   } catch (err) {
-    console.error("cancelQuiz err", err);
-    return res.status(500).json({ error: "cancel failed" });
+    console.error("cancelQuiz error:", err);
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
