@@ -82,6 +82,7 @@ export default function CreateQuizPage() {
       alert(`Quiz created successfully! ID: ${quiz.id}`);
       router.push(`/host/lobby/${quiz.id}`);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       console.error("Error creating quiz:", err);
       alert(`Failed to create quiz: ${err.message || "Unknown error"}`);

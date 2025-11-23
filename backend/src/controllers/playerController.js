@@ -25,13 +25,13 @@ import { pool } from "../db.js";
  */
 export const joinQuiz = async (req, res) => {
   const quizId = req.params.id;
-  const { wallet } = req.body;
+  const { wallet, name } = req.body;
   if (!wallet) return res.status(400).json({ error: "wallet required" });
 
   try {
     const insert = await pool.query(
-      `INSERT INTO participants (quiz_id, wallet) VALUES ($1,$2) RETURNING *`,
-      [quizId, wallet]
+      `INSERT INTO participants (quiz_id, wallet, name) VALUES ($1,$2,$3) RETURNING *`,
+      [quizId, wallet, name]
     );
     return res.status(201).json({ participant: insert.rows[0] });
   } catch (err) {
