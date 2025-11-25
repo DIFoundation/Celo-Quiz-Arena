@@ -3,7 +3,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { useConnection } from "wagmi"
+import { useAccount } from "wagmi"
 import { useQuizFactory } from "@/hooks/useBlockchain"
 import axios from "axios"
 
@@ -13,17 +13,32 @@ const api = axios.create({
 
 export default function CreateQuizPage() {
   const router = useRouter()
-  const { address, isConnected } = useConnection()
+  const { address, isConnected } = useAccount()
   const { createQuiz, isPending, isConfirming } = useQuizFactory()
 
   const [numWinners, setNumWinners] = useState(3)
-  const [token, setToken] = useState("")
+  const [token, setToken] = useState("native") // Use token keys instead of addresses
   const [equalSplit, setEqualSplit] = useState(true)
   const [percentages, setPercentages] = useState("50,30,20")
   const [metadataURI, setMetadataURI] = useState("")
   const [prizeAmount, setPrizeAmount] = useState("0.1")
   const [loading, setLoading] = useState(false)
   const [step, setStep] = useState<"form" | "blockchain" | "backend">("form")
+
+  const tokenConfig = {
+    native: {
+      name: "Native CELO",
+      address: "0x0000000000000000000000000000000000000000",
+    },
+    cUSD: {
+      name: "cUSD",
+      address: "0xdE9e4C3ce781b4bA68120d6261cbad65ce0aB00b",
+    },
+    USDT: {
+      name: "USDT",
+      address: "0xdF629d76EF573512B74a17C6eADB26e3aE1C90A3", // Celo Sepolia USDT
+    },
+  }
 
   const handleCreate = async () => {
     if (!isConnected || !address) {
@@ -44,9 +59,10 @@ export default function CreateQuizPage() {
       console.log("Creating quiz on blockchain...")
 
       const percentagesArray = equalSplit ? [] : percentages.split(",").map((p) => Number(p.trim()))
+      const tokenAddress = tokenConfig[token as keyof typeof tokenConfig].address
 
       const txHash = await createQuiz({
-        token,
+        token: tokenAddress,
         numWinners,
         percentages: percentagesArray,
         equalSplit,
@@ -64,7 +80,7 @@ export default function CreateQuizPage() {
 
       const payload = {
         host: address,
-        token: token || "0x0000000000000000000000000000000000000000",
+        token: tokenAddress,
         num_winners: numWinners,
         equal_split: equalSplit,
         percentages: percentagesArray,
@@ -140,24 +156,30 @@ export default function CreateQuizPage() {
           )}
         </div>
 
-        {/* Token */}
         <div>
-          <label className="block text-sm font-medium mb-2">Payment Token</label>
-          <select
-            id="token"
-            name="token"
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            className="bg-white dark:bg-slate-800 border w-full text-black dark:text-white p-3 rounded"
-          >
-            <option value="0x0000000000000000000000000000000000000000">Native CELO</option>
-            <option value="0xdE9e4C3ce781b4bA68120d6261cbad65ce0aB00b">cUSD</option>
-          </select>
+          <label className="block text-sm font-medium mb-3">Payment Token</label>
+          <div className="grid grid-cols-3 gap-3">
+            {Object.entries(tokenConfig).map(([key, config]) => (
+              <button
+                key={key}
+                onClick={() => setToken(key)}
+                className={`p-4 rounded-lg border-2 transition-all font-medium text-center ${
+                  token === key
+                    ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-100"
+                    : "border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:border-indigo-300"
+                }`}
+              >
+                {config.name}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Prize Amount */}
         <div>
-          <label className="block text-sm font-medium mb-2">Prize Pool (CELO)</label>
+          <label className="block text-sm font-medium mb-2">
+            Prize Pool ({tokenConfig[token as keyof typeof tokenConfig].name})
+          </label>
           <input
             type="number"
             step="0.01"
@@ -166,7 +188,9 @@ export default function CreateQuizPage() {
             onChange={(e) => setPrizeAmount(e.target.value)}
             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           />
-          <p className="text-xs text-gray-500 mt-1">Amount of CELO to fund the prize pool</p>
+          <p className="text-xs text-gray-500 mt-1">
+            Amount of {tokenConfig[token as keyof typeof tokenConfig].name} to fund the prize pool
+          </p>
         </div>
 
         {/* Metadata URI */}
@@ -207,7 +231,7 @@ export default function CreateQuizPage() {
       <div className="mt-6 p-4 bg-gray-50 dark:bg-slate-700 rounded-lg">
         <h3 className="font-semibold mb-2">How it works:</h3>
         <ol className="list-decimal list-inside space-y-1 text-sm text-gray-600 dark:text-gray-300">
-          <li>Quiz is created on Celo blockchain</li>
+          <li>Quiz is created on Celo blockchain with your chosen token</li>
           <li>Quiz data is saved to backend database</li>
           <li>You&apos;ll be redirected to the lobby to manage your quiz</li>
           <li>Fund the prize pool and start when ready</li>

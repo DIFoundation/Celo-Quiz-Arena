@@ -116,6 +116,101 @@ export const finalizeQuiz = async (req, res) => {
 }
 
 /**
+ * Distribute prizes via smart contract
+ */
+export const distributePrizes = async (req, res) => {
+  const { id: quizId } = req.params
+  const { winnersWallets } = req.body
+
+  try {
+    if (!winnersWallets || !Array.isArray(winnersWallets)) {
+      return res.status(400).json({ ok: false, error: "winnersWallets array is required" })
+    }
+
+    // Fetch quiz to get contract address and status
+    const quizRes = await db.query("SELECT * FROM quizzes WHERE id = $1", [quizId])
+    if (quizRes.rowCount === 0) {
+      return res.status(404).json({ ok: false, error: "Quiz not found" })
+    }
+
+    const quiz = quizRes.rows[0]
+
+    if (!quiz.contract_address) {
+      return res.status(400).json({ ok: false, error: "No contract address found for this quiz" })
+    }
+
+    if (quiz.status !== "finalized") {
+      return res.status(400).json({ ok: false, error: "Quiz must be finalized before distributing prizes" })
+    }
+
+    // Update quiz status to show prizes are being distributed
+    await db.query("UPDATE quizzes SET status = $1 WHERE id = $2", ["distributing", quizId])
+
+    // Emit prize distribution started event
+    io.to(`quiz_${quizId}`).emit("prize_distribution_started", {
+      quizId,
+      winnersCount: winnersWallets.length,
+      contractAddress: quiz.contract_address,
+    })
+
+    return res.json({
+      ok: true,
+      message: "Prize distribution initiated",
+      quizId,
+      contractAddress: quiz.contract_address,
+      winnersCount: winnersWallets.length,
+      token: quiz.token,
+    })
+  } catch (err) {
+    console.error("distributePrizes error:", err)
+    return res.status(500).json({ ok: false, error: err.message })
+  }
+}
+
+/**
+ * Confirm prize distribution after blockchain transaction
+ */
+export const confirmPrizeDistribution = async (req, res) => {
+  const { id: quizId } = req.params
+  const { transactionHash } = req.body
+
+  try {
+    if (!transactionHash) {
+      return res.status(400).json({ ok: false, error: "transactionHash is required" })
+    }
+
+    // Mark quiz as completed
+    const quizRes = await db.query("UPDATE quizzes SET status = $1, distribution_tx = $2 WHERE id = $3 RETURNING *", [
+      "completed",
+      transactionHash,
+      quizId,
+    ])
+
+    if (quizRes.rowCount === 0) {
+      return res.status(404).json({ ok: false, error: "Quiz not found" })
+    }
+
+    const quiz = quizRes.rows[0]
+
+    // Emit completion event
+    io.to(`quiz_${quizId}`).emit("prize_distribution_completed", {
+      quizId,
+      transactionHash,
+      status: "completed",
+    })
+
+    return res.json({
+      ok: true,
+      message: "Prize distribution confirmed",
+      quiz,
+    })
+  } catch (err) {
+    console.error("confirmPrizeDistribution error:", err)
+    return res.status(500).json({ ok: false, error: err.message })
+  }
+}
+
+/**
  * Cancel quiz before it starts
  */
 export const cancelQuiz = async (req, res) => {

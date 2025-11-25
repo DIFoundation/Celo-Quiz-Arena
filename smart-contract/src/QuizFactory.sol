@@ -73,4 +73,3 @@ contract QuizFactory {
         return hostQuizzes[host];
     }
 }
-
