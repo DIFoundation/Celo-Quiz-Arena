@@ -29,4 +29,3 @@ export default function PlayerLobby({ params, wallet }: { params: { quizId: stri
     </div>
   );
 }
-  
