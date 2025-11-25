@@ -1,23 +1,20 @@
 // src/routes/playerRoutes.js
 // import express from "express";
-import { Router } from "express";
-import {
-  joinQuiz,
-  submitAnswer,
-  getLeaderboard
-} from "../controllers/playerController.js";
+import { Router } from "express"
+import { joinQuiz, submitAnswer, getParticipantAnswers, getLeaderboard } from "../controllers/playerController.js"
 
 // const router = express.Router({ mergeParams: true });
-const router = Router();
+const router = Router()
 
-// join: POST /api/quizzes/:id/join
-router.post("/:id/join", joinQuiz.bind(null));
-// router.post("/:quizId/join", joinQuiz);
+// join: POST /api/player/:id/join
+router.post("/:id/join", joinQuiz)
 
-// submit answer: POST /api/quizzes/:id/answer
-router.post("/:id/answer", submitAnswer.bind(null));
+// submit answer: POST /api/player/:id/answer
+router.post("/:id/answer", submitAnswer)
 
-// leaderboard: GET /api/quizzes/:id/leaderboard
-router.get("/:id/leaderboard", getLeaderboard.bind(null));
+router.get("/:id/answers", getParticipantAnswers)
 
-export default router;
+// leaderboard: GET /api/player/:id/leaderboard
+router.get("/:id/leaderboard", getLeaderboard)
+
+export default router
