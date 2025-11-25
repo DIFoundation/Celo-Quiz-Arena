@@ -1,51 +1,49 @@
 // app/host/create/page.tsx
-"use client";
+"use client"
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { useConnection } from "wagmi";
-import { useQuizFactory } from "@/hooks/useBlockchain";
-import axios from "axios";
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { useConnection } from "wagmi"
+import { useQuizFactory } from "@/hooks/useBlockchain"
+import axios from "axios"
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_BACKEND_URL,
-});
+})
 
 export default function CreateQuizPage() {
-  const router = useRouter();
-  const { address, isConnected } = useConnection();
-  const { createQuiz, isPending, isConfirming } = useQuizFactory();
+  const router = useRouter()
+  const { address, isConnected } = useConnection()
+  const { createQuiz, isPending, isConfirming } = useQuizFactory()
 
-  const [numWinners, setNumWinners] = useState(3);
-  const [token, setToken] = useState("");
-  const [equalSplit, setEqualSplit] = useState(true);
-  const [percentages, setPercentages] = useState("50,30,20");
-  const [metadataURI, setMetadataURI] = useState("");
-  const [prizeAmount, setPrizeAmount] = useState("0.1");
-  const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<"form" | "blockchain" | "backend">("form");
+  const [numWinners, setNumWinners] = useState(3)
+  const [token, setToken] = useState("")
+  const [equalSplit, setEqualSplit] = useState(true)
+  const [percentages, setPercentages] = useState("50,30,20")
+  const [metadataURI, setMetadataURI] = useState("")
+  const [prizeAmount, setPrizeAmount] = useState("0.1")
+  const [loading, setLoading] = useState(false)
+  const [step, setStep] = useState<"form" | "blockchain" | "backend">("form")
 
   const handleCreate = async () => {
     if (!isConnected || !address) {
-      alert("Please connect your wallet first");
-      return;
+      alert("Please connect your wallet first")
+      return
     }
 
     if (!metadataURI) {
-      alert("Please provide a metadata URI with quiz questions");
-      return;
+      alert("Please provide a metadata URI with quiz questions")
+      return
     }
 
-    setLoading(true);
+    setLoading(true)
 
     try {
       // Step 1: Create quiz on blockchain
-      setStep("blockchain");
-      console.log("Creating quiz on blockchain...");
+      setStep("blockchain")
+      console.log("Creating quiz on blockchain...")
 
-      const percentagesArray = equalSplit 
-        ? [] 
-        : percentages.split(",").map((p) => Number(p.trim()));
+      const percentagesArray = equalSplit ? [] : percentages.split(",").map((p) => Number(p.trim()))
 
       const txHash = await createQuiz({
         token,
@@ -53,44 +51,44 @@ export default function CreateQuizPage() {
         percentages: percentagesArray,
         equalSplit,
         metadataURI,
-      });
+      })
 
-      console.log("Quiz created on blockchain. Transaction:", txHash);
+      console.log("Quiz created on blockchain. Transaction:", txHash)
 
-      // Wait a bit for transaction to be mined
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Wait for transaction to be mined
+      await new Promise((resolve) => setTimeout(resolve, 3000))
 
       // Step 2: Create quiz in backend database
-      setStep("backend");
-      console.log("Creating quiz in backend...");
+      setStep("backend")
+      console.log("Creating quiz in backend...")
 
       const payload = {
         host: address,
-        token,
+        token: token || "0x0000000000000000000000000000000000000000",
         num_winners: numWinners,
         equal_split: equalSplit,
         percentages: percentagesArray,
         metadata_uri: metadataURI,
-        contract_address: txHash, // Store tx hash temporarily
-      };
+        contract_address: txHash,
+      }
 
-      const res = await api.post("/quiz", payload);
-      const quiz = res.data.quiz;
+      const res = await api.post("/quiz", payload)
+      const quiz = res.data.quiz
 
-      console.log("Quiz created in backend:", quiz);
+      console.log("Quiz created in backend:", quiz)
 
-      alert(`Quiz created successfully! ID: ${quiz.id}`);
-      router.push(`/host/lobby/${quiz.id}`);
+      alert(`Quiz created successfully! ID: ${quiz.id}`)
+      router.push(`/host/lobby/${quiz.id}`)
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
-      console.error("Error creating quiz:", err);
-      alert(`Failed to create quiz: ${err.message || "Unknown error"}`);
+      console.error("Error creating quiz:", err)
+      alert(`Failed to create quiz: ${err.message || "Unknown error"}`)
     } finally {
-      setLoading(false);
-      setStep("form");
+      setLoading(false)
+      setStep("form")
     }
-  };
+  }
 
   return (
     <div className="max-w-3xl mx-auto p-6">
@@ -98,18 +96,14 @@ export default function CreateQuizPage() {
 
       {!isConnected && (
         <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <p className="text-yellow-800">
-            Please connect your wallet to create a quiz
-          </p>
+          <p className="text-yellow-800">Please connect your wallet to create a quiz</p>
         </div>
       )}
 
       <div className="bg-white dark:bg-slate-800 rounded-lg shadow-lg p-6 space-y-6">
         {/* Number of Winners */}
         <div>
-          <label className="block text-sm font-medium mb-2">
-            Number of Winners
-          </label>
+          <label className="block text-sm font-medium mb-2">Number of Winners</label>
           <input
             type="number"
             min="1"
@@ -134,18 +128,14 @@ export default function CreateQuizPage() {
 
           {!equalSplit && (
             <div>
-              <label className="block text-sm font-medium mb-2">
-                Percentages (comma-separated, must sum to 100)
-              </label>
+              <label className="block text-sm font-medium mb-2">Percentages (comma-separated, must sum to 100)</label>
               <input
                 value={percentages}
                 onChange={(e) => setPercentages(e.target.value)}
                 placeholder="e.g., 50,30,20"
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Example for 3 winners: 50,30,20 (must equal 100%)
-              </p>
+              <p className="text-xs text-gray-500 mt-1">Example for 3 winners: 50,30,20 (must equal 100%)</p>
             </div>
           )}
         </div>
@@ -153,10 +143,11 @@ export default function CreateQuizPage() {
         {/* Token */}
         <div>
           <label className="block text-sm font-medium mb-2">Payment Token</label>
-          <select 
-            id="token" 
-            name="token" 
-            value={token} onChange={(e) => setToken(e.target.value)}
+          <select
+            id="token"
+            name="token"
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
             className="bg-white dark:bg-slate-800 border w-full text-black dark:text-white p-3 rounded"
           >
             <option value="0x0000000000000000000000000000000000000000">Native CELO</option>
@@ -166,9 +157,7 @@ export default function CreateQuizPage() {
 
         {/* Prize Amount */}
         <div>
-          <label className="block text-sm font-medium mb-2">
-            Prize Pool (CELO)
-          </label>
+          <label className="block text-sm font-medium mb-2">Prize Pool (CELO)</label>
           <input
             type="number"
             step="0.01"
@@ -177,25 +166,19 @@ export default function CreateQuizPage() {
             onChange={(e) => setPrizeAmount(e.target.value)}
             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           />
-          <p className="text-xs text-gray-500 mt-1">
-            Amount of CELO to fund the prize pool
-          </p>
+          <p className="text-xs text-gray-500 mt-1">Amount of CELO to fund the prize pool</p>
         </div>
 
         {/* Metadata URI */}
         <div>
-          <label className="block text-sm font-medium mb-2">
-            Metadata URI (IPFS or public URL)
-          </label>
+          <label className="block text-sm font-medium mb-2">Metadata URI (IPFS or public URL)</label>
           <input
             value={metadataURI}
             onChange={(e) => setMetadataURI(e.target.value)}
             placeholder="ipfs://... or https://..."
             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           />
-          <p className="text-xs text-gray-500 mt-1">
-            JSON file containing quiz questions and answers
-          </p>
+          <p className="text-xs text-gray-500 mt-1">JSON file containing quiz questions and answers</p>
         </div>
 
         {/* Status Messages */}
@@ -231,5 +214,5 @@ export default function CreateQuizPage() {
         </ol>
       </div>
     </div>
-  );
+  )
 }

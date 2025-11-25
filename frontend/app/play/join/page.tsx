@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAccount } from "wagmi";
+import { useConnection } from "wagmi";
 import axios from "axios";
 
 const api = axios.create({
@@ -12,7 +12,7 @@ const api = axios.create({
 
 export default function JoinPage() {
   const router = useRouter();
-  const { address, isConnected } = useAccount();
+  const { address, isConnected } = useConnection();
   
   const [quizId, setQuizId] = useState("");
   const [playerName, setPlayerName] = useState("");
