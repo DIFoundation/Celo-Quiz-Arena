@@ -7,9 +7,25 @@ import {
   cancelQuiz,
   distributePrizes,
   confirmPrizeDistribution,
+  getAllQuizzes,
+  getAnalytics,
+  getQuizDetails,
+  deleteQuiz,
 } from "../controllers/adminController.js"
 
 const router = express.Router()
+
+// GET /api/admin/
+router.get("/", getAllQuizzes)
+
+// GET /api/admin/analytics
+router.get("/analytics", getAnalytics)
+
+// GET /api/admin/:id/details
+router.get("/:id/details", getQuizDetails)
+
+// DELETE /api/admin/:id
+router.delete("/:id", deleteQuiz)
 
 // POST /api/admin/:id/start
 router.post("/:id/start", startQuiz)

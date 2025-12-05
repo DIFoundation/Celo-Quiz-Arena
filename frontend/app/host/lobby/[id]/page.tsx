@@ -3,7 +3,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { useAccount } from "wagmi"
+import { useConnection } from "wagmi"
 import { io, type Socket } from "socket.io-client"
 import axios from "axios"
 import { useQuizGame } from "@/hooks/useBlockchain"
@@ -33,7 +33,7 @@ let socket: Socket | null = null
 export default function HostLobby() {
   const params = useParams()
   const router = useRouter()
-  const { address, isConnected } = useAccount()
+  const { address, isConnected } = useConnection()
   const quizId = params.id as string
 
   const [quiz, setQuiz] = useState<Quiz | null>(null)

@@ -244,3 +244,168 @@ export const cancelQuiz = async (req, res) => {
     return res.status(500).json({ ok: false, error: err.message })
   }
 }
+
+/**
+ * Get all quizzes with pagination and filters
+ */
+export const getAllQuizzes = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, status, host } = req.query
+    const offset = (page - 1) * limit
+
+    let query = "SELECT * FROM quizzes WHERE 1=1"
+    const params = []
+    let paramCount = 1
+
+    if (status) {
+      query += ` AND status = $${paramCount++}`
+      params.push(status)
+    }
+
+    if (host) {
+      query += ` AND host = $${paramCount++}`
+      params.push(host)
+    }
+
+    query += ` ORDER BY created_at DESC LIMIT $${paramCount++} OFFSET $${paramCount++}`
+    params.push(limit, offset)
+
+    const quizzesRes = await db.query(query, params)
+
+    const countRes = await db.query(
+      `SELECT COUNT(*) as total FROM quizzes WHERE 1=1${status ? " AND status = $1" : ""}${host ? ` AND host = $${status ? 2 : 1}` : ""}`,
+      [status, host].filter(Boolean),
+    )
+
+    res.json({
+      ok: true,
+      quizzes: quizzesRes.rows,
+      total: Number.parseInt(countRes.rows[0].total),
+      page: Number.parseInt(page),
+      pages: Math.ceil(countRes.rows[0].total / limit),
+    })
+  } catch (err) {
+    console.error("getAllQuizzes error:", err)
+    res.status(500).json({ ok: false, error: err.message })
+  }
+}
+
+/**
+ * Get quiz with full details and participants
+ */
+export const getQuizDetails = async (req, res) => {
+  try {
+    const { id: quizId } = req.params
+
+    const quizRes = await db.query("SELECT * FROM quizzes WHERE id = $1", [quizId])
+    if (quizRes.rowCount === 0) {
+      return res.status(404).json({ ok: false, error: "Quiz not found" })
+    }
+
+    const quiz = quizRes.rows[0]
+
+    const participantsRes = await db.query(
+      "SELECT id, wallet, name, score, joined_at FROM participants WHERE quiz_id = $1 ORDER BY score DESC",
+      [quizId],
+    )
+
+    const questionsRes = await db.query(
+      "SELECT id, question_index, question_text FROM questions WHERE quiz_id = $1 ORDER BY question_index ASC",
+      [quizId],
+    )
+
+    res.json({
+      ok: true,
+      quiz,
+      participants: participantsRes.rows,
+      questions: questionsRes.rows,
+      totalParticipants: participantsRes.rowCount,
+      totalQuestions: questionsRes.rowCount,
+    })
+  } catch (err) {
+    console.error("getQuizDetails error:", err)
+    res.status(500).json({ ok: false, error: err.message })
+  }
+}
+
+/**
+ * Get analytics and statistics
+ */
+export const getAnalytics = async (req, res) => {
+  try {
+    // Total quizzes
+    const totalQuizzesRes = await db.query("SELECT COUNT(*) as count FROM quizzes")
+    const totalQuizzes = Number.parseInt(totalQuizzesRes.rows[0].count)
+
+    // Total participants
+    const totalParticipantsRes = await db.query("SELECT COUNT(DISTINCT quiz_id) as count FROM participants")
+    const totalParticipantsCount = Number.parseInt(totalParticipantsRes.rows[0].count)
+
+    // Active quizzes
+    const activeQuizzesRes = await db.query("SELECT COUNT(*) as count FROM quizzes WHERE status = 'active'")
+    const activeQuizzes = Number.parseInt(activeQuizzesRes.rows[0].count)
+
+    // Completed quizzes
+    const completedQuizzesRes = await db.query("SELECT COUNT(*) as count FROM quizzes WHERE status = 'completed'")
+    const completedQuizzes = Number.parseInt(completedQuizzesRes.rows[0].count)
+
+    // Token distribution
+    const tokenDistRes = await db.query(
+      `SELECT token, COUNT(*) as count FROM quizzes GROUP BY token ORDER BY count DESC`,
+    )
+
+    // Quiz status breakdown
+    const statusRes = await db.query(`SELECT status, COUNT(*) as count FROM quizzes GROUP BY status`)
+
+    // Revenue by token (from completed quizzes)
+    const revenueRes = await db.query(
+      `SELECT token, COUNT(*) as quiz_count FROM quizzes WHERE status = 'completed' GROUP BY token`,
+    )
+
+    res.json({
+      ok: true,
+      stats: {
+        totalQuizzes,
+        totalParticipants: totalParticipantsCount,
+        activeQuizzes,
+        completedQuizzes,
+        tokenDistribution: tokenDistRes.rows,
+        statusBreakdown: statusRes.rows,
+        revenue: revenueRes.rows,
+      },
+    })
+  } catch (err) {
+    console.error("getAnalytics error:", err)
+    res.status(500).json({ ok: false, error: err.message })
+  }
+}
+
+/**
+ * Delete quiz (only if pending)
+ */
+export const deleteQuiz = async (req, res) => {
+  try {
+    const { id: quizId } = req.params
+
+    const quizRes = await db.query("UPDATE quizzes SET status = $1 WHERE id = $2 AND status = 'pending' RETURNING *", [
+      "deleted",
+      quizId,
+    ])
+
+    if (quizRes.rowCount === 0) {
+      return res.status(400).json({
+        ok: false,
+        error: "Quiz not found or already started",
+      })
+    }
+
+    res.json({
+      ok: true,
+      message: "Quiz deleted",
+      quiz: quizRes.rows[0],
+    })
+  } catch (err) {
+    console.error("deleteQuiz error:", err)
+    res.status(500).json({ ok: false, error: err.message })
+  }
+}

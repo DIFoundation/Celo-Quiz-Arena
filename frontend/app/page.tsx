@@ -1,23 +1,25 @@
-// app/page.jsx
-"use client";
+"use client"
 
-import Link from "next/link";
-import Image from "next/image";
+import Link from "next/link"
+import Image from "next/image"
 
 export default function Home() {
   return (
     <section className="flex flex-col items-center justify-center gap-8 py-20 text-center">
       <h1 className="text-5xl font-extrabold">Celo Quiz Arena</h1>
       <p className="max-w-2xl text-gray-600 dark:text-gray-300">
-        Host or join interactive, mobile-first quiz games. Winners are paid on-chain with CELO/cUSD.
+        Host or join interactive, mobile-first quiz games. Winners are paid on-chain with CELO/cUSD/USDT.
       </p>
 
-      <div className="flex gap-4">
-        <Link href="/play/join" className="px-6 py-3 rounded-xl bg-indigo-600 text-white">
+      <div className="flex gap-4 flex-wrap justify-center">
+        <Link href="/play/join" className="px-6 py-3 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700">
           Play a Quiz
         </Link>
-        <Link href="/host/create" className="px-6 py-3 rounded-xl bg-green-600 text-white">
+        <Link href="/host/create" className="px-6 py-3 rounded-xl bg-green-600 text-white hover:bg-green-700">
           Host a Quiz
+        </Link>
+        <Link href="/admin" className="px-6 py-3 rounded-xl bg-slate-600 text-white hover:bg-slate-700">
+          Admin Dashboard
         </Link>
       </div>
 
@@ -31,5 +33,5 @@ export default function Home() {
         />
       </div>
     </section>
-  );
+  )
 }
