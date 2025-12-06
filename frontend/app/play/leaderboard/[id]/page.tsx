@@ -3,7 +3,7 @@
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import api from "../../../api/backend";
-import LeaderboardTable from "../../../components/LeaderboardTable";
+import LeaderboardTable from "@/components/LeaderboardTable";
 
 export default function LeaderboardPage() {
   const { id } = useParams();
