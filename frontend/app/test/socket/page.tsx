@@ -11,6 +11,7 @@ let socket: Socket | null = null;
 
 export default function SocketTestPage() {
   const [connected, setConnected] = useState(false);
+  const [connecting, setConnecting] = useState(false);
   const [events, setEvents] = useState<string[]>([]);
   const [testQuizId, setTestQuizId] = useState("1");
 
@@ -22,12 +23,15 @@ export default function SocketTestPage() {
   useEffect(() => {
     const socketUrl = process.env.NEXT_PUBLIC_BACKEND_SOCKET || "http://localhost:5000";
     
-    addEvent(`Connecting to: ${socketUrl}`);
-    
     socket = io(socketUrl, {
       transports: ['websocket', 'polling'],
       reconnection: true,
     });
+    
+    socket.on("connecting", () => {
+      setConnecting(true);
+      addEvent(`Connecting to: ${socketUrl}`);
+    })
 
     socket.on("connect", () => {
       setConnected(true);
@@ -103,7 +107,7 @@ export default function SocketTestPage() {
           <div className={`w-4 h-4 rounded-full ${connected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
           <div>
             <p className="text-lg font-medium">
-              {connected ? '✅ Connected' : '❌ Disconnected'}
+              {connecting ? 'Connecting...' : connected ? '✅ Connected': '❌ Disconnected'}
             </p>
             {socket?.id && (
               <p className="text-sm text-gray-600 dark:text-gray-400 font-mono">
@@ -132,7 +136,7 @@ export default function SocketTestPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <button
             onClick={joinAsHost}
-            disabled={!connected}
+            disabled={!connected || connecting}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
           >
             Join as Host
@@ -140,7 +144,7 @@ export default function SocketTestPage() {
           
           <button
             onClick={joinAsPlayer}
-            disabled={!connected}
+            disabled={!connected || connecting}
             className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
           >
             Join as Player
@@ -148,7 +152,7 @@ export default function SocketTestPage() {
           
           <button
             onClick={startGame}
-            disabled={!connected}
+            disabled={!connected || connecting}
             className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50"
           >
             Start Game
@@ -186,11 +190,11 @@ export default function SocketTestPage() {
         <h3 className="font-semibold mb-2">How to use:</h3>
         <ol className="list-decimal list-inside space-y-1 text-sm">
           <li>Check if socket connects (green indicator)</li>
-          <li>Enter a quiz ID (or use default "1")</li>
-          <li>Click "Join as Host" to simulate host joining</li>
-          <li>Open another browser tab/window and click "Join as Player"</li>
+          <li>Enter a quiz ID (or use default &quot;1&quot;)</li>
+          <li>Click &quot;Join as Host&quot; to simulate host joining</li>
+          <li>Open another browser tab/window and click &quot;Join as Player&quot;</li>
           <li>Watch the event log for real-time updates</li>
-          <li>Click "Start Game" to test game start broadcast</li>
+          <li>Click &quot;Start Game&quot; to test game start broadcast</li>
         </ol>
       </div>
     </div>

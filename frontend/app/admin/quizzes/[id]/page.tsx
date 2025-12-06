@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 
@@ -48,7 +48,7 @@ export default function QuizDetailsPage() {
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
 
-  const fetchQuizDetails = async () => {
+  const fetchQuizDetails = useCallback(async () => {
     try {
       setLoading(true)
       const res = await fetch(`/api/admin/${quizId}/details`)
@@ -61,11 +61,11 @@ export default function QuizDetailsPage() {
     } finally {
       setLoading(false)
     }
-  }
-
+  }, [quizId])
+  
   useEffect(() => {
     fetchQuizDetails()
-  }, [quizId])
+  }, [quizId, fetchQuizDetails])
 
   const handleAction = async (action: string) => {
     try {

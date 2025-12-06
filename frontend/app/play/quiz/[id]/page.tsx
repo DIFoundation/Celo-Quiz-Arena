@@ -36,7 +36,10 @@ export default function ResultsPage() {
   const [quiz, setQuiz] = useState<Quiz | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
-  const [distributionStatus, setDistributionStatus] = useState<"idle" | "processing" | "completed" | "failed">("idle")
+  const [
+    distributionStatus, 
+    // setDistributionStatus
+  ] = useState<"idle" | "processing" | "completed" | "failed">("idle")
 
   // Token display names
   const tokenNames: Record<string, string> = {
@@ -62,6 +65,7 @@ export default function ResultsPage() {
         // Extract winners (top N)
         const topWinners = results.slice(0, quizRes.data.quiz.num_winners || 3)
         setWinners(topWinners)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (err: any) {
         console.error("Error loading results:", err)
         setError(err.message || "Failed to load results")
@@ -79,6 +83,7 @@ export default function ResultsPage() {
 
   const calculatePrizeAmount = (rank: number) => {
     if (!quiz) return "0"
+    console.log("rank: ", rank)
 
     // This is a placeholder - actual prize calculation would come from contract
     const totalPrize = 1.0 // In real app, fetch from contract

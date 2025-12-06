@@ -23,29 +23,30 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState<string>("")
 //   const router = useRouter()
 
-  const fetchQuizzes = async () => {
-    try {
-      setLoading(true)
-      const query = new URLSearchParams()
-      query.append("page", page.toString())
-      query.append("limit", "10")
-      if (statusFilter) query.append("status", statusFilter)
 
-      const res = await fetch(`/api/admin?${query}`)
-      const data = await res.json()
-
-      if (data.ok) {
-        setQuizzes(data.quizzes)
-        setTotalPages(data.pages)
+useEffect(() => {
+    const fetchQuizzes = async () => {
+      try {
+        setLoading(true)
+        const query = new URLSearchParams()
+        query.append("page", page.toString())
+        query.append("limit", "10")
+        if (statusFilter) query.append("status", statusFilter)
+    
+        const res = await fetch(`/api/admin?${query}`)
+        const data = await res.json()
+    
+        if (data.ok) {
+          setQuizzes(data.quizzes)
+          setTotalPages(data.pages)
+        }
+      } catch (err) {
+        console.error("Error fetching quizzes:", err)
+      } finally {
+        setLoading(false)
       }
-    } catch (err) {
-      console.error("Error fetching quizzes:", err)
-    } finally {
-      setLoading(false)
     }
-  }
-
-  useEffect(() => {
+    
     fetchQuizzes()
   }, [page, statusFilter])
 

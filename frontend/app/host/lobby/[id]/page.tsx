@@ -62,6 +62,7 @@ export default function HostLobby() {
           setContractAddress(response.data.quiz.contract_address as `0x${string}`)
         }
       }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       console.error("Error loading quiz:", err)
       setError(err.response?.data?.error || "Failed to load quiz")
@@ -140,6 +141,7 @@ export default function HostLobby() {
       } else {
         setError(response.data.message || "Failed to start quiz")
       }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       console.error("Error starting quiz:", err)
       setError(err.response?.data?.message || err.response?.data?.error || "Failed to start quiz")
@@ -161,6 +163,7 @@ export default function HostLobby() {
       console.log("Prize pool funded:", txHash)
       alert(`Prize pool funded successfully with ${fundAmount} CELO`)
       setFundAmount("1")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       console.error("Error funding prize pool:", err)
       setError(`Failed to fund prize pool: ${err.message}`)

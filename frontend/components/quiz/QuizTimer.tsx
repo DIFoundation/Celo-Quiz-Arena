@@ -5,7 +5,7 @@ export default function QuizTimer({ duration = 12, onExpire = () => {} }) {
   const [time, setTime] = useState(duration);
 
   useEffect(() => {
-    setTime(duration);
+    // setTime(duration);
     const iv = setInterval(() => {
       setTime((t) => {
         if (t <= 1) {
@@ -17,7 +17,7 @@ export default function QuizTimer({ duration = 12, onExpire = () => {} }) {
       });
     }, 1000);
     return () => clearInterval(iv);
-  }, [duration]);
+  }, [duration, onExpire]);
 
   const pct = Math.max(0, (time / duration) * 100);
 
